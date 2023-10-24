@@ -10,11 +10,13 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
+import javax.sound.sampled.*;
+
 public class TCPClient extends JFrame {
     private JTextField textField;
     // private JButton botonEnviar;
     private JTextPane areaMensajes;
-    private String username;
+    private String username = null;
     private StyledDocument doc;
     private Socket socket;
     private DataInputStream in;
@@ -46,7 +48,7 @@ public class TCPClient extends JFrame {
         textField.setBackground(new Color(255, 199, 255));
         textField.setForeground(Color.BLACK);
 
-        // botonEnviar = new JButton("➡️");
+        // botonEnviar = new JButton("Enviar");
 
         areaMensajes = new JTextPane();
         areaMensajes.setEditable(false);
@@ -85,12 +87,20 @@ public class TCPClient extends JFrame {
     }
 
     private void initializeConnection() {
+
         try {
+            while (username == null || username.length() < 4) {
+                username = JOptionPane.showInputDialog("Ingrese su usuario (mínimo 4 caracteres): ");
+                if (username == null) {
+                    System.exit(0);
+                }
+            }
+
             int serverPort = 7896;
             socket = new Socket("192.168.43.120", serverPort);
             in = new DataInputStream(socket.getInputStream());
             out = new DataOutputStream(socket.getOutputStream());
-            username = JOptionPane.showInputDialog("Ingrese su nombre de usuario: ");
+
             out.writeUTF(username);
 
             new Thread(() -> {
@@ -105,14 +115,22 @@ public class TCPClient extends JFrame {
                          */
                         String[] responseSplit = response.split(":", 2);
                         String username = responseSplit[0].trim();
-                        String mssg = responseSplit[1];
-                        mssg = mssg.substring(1);
-                        if (mssg.equals("se ha conectado")) {
-                            statusCon(username, searchUser(username), mssg,
+                        String msgs = responseSplit[1];
+                        msgs = msgs.substring(1);
+                        if (msgs.equals("se ha conectado")) {
+                            statusCon(username, searchUser(username), msgs,
                                     new Color(3, 234, 215));
-                        } else if (mssg.equals("se ha ido")) {
-                            statusCon(username, searchUser(username), mssg,
+                            try {
+                                reproducirAudio("into.wav");
+                            } catch (Exception e) {
+                            }
+                        } else if (msgs.equals("se ha ido")) {
+                            statusCon(username, searchUser(username), msgs,
                                     new Color(234, 3, 22));
+                            try {
+                                reproducirAudio("outo.wav");
+                            } catch (Exception e) {
+                            }
                             for (int i = 0; i < usernameOnline.size(); i++) {
                                 if (usernameOnline.get(i).equals(username)) {
                                     usernameOnline.remove(i);
@@ -124,19 +142,19 @@ public class TCPClient extends JFrame {
                             }
                         } else {
                             // appendText(username, new Color(234, 215, 3), false);
-                            // appendText(mssg, new Color(255, 199, 255), false);
+                            // appendText(msgs, new Color(255, 199, 255), false);
                             LocalTime horaActual = LocalTime.now();
                             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
-                            appendText(username, mssg, horaActual.format(formatter), false);
+                            appendText(username, msgs, horaActual.format(formatter), false);
                         }
                     }
                 } catch (IOException e) {
-                    // No imprimir mensaje porque cerró conexión
+                    // No imprimir mensaje porque cerro conexion
                     // e.printStackTrace();
                 }
             }).start();
         } catch (UnknownHostException e) {
-            JOptionPane.showMessageDialog(this, "Error de conexión: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "Error de conexion: " + e.getMessage());
         } catch (IOException e) {
             JOptionPane.showMessageDialog(this, "Error de E/S: " + e.getMessage());
         }
@@ -167,7 +185,7 @@ public class TCPClient extends JFrame {
         System.exit(0);
     }
 
-    private void appendText(String user, String mssg, String time, boolean rightAlign) {
+    private void appendText(String user, String msgs, String time, boolean rightAlign) {
         int indiceUsuario = searchUser(user);
 
         SimpleAttributeSet attributesU = new SimpleAttributeSet();
@@ -192,8 +210,12 @@ public class TCPClient extends JFrame {
         try {
             if (user.equals("Tu") == false) {
                 doc.insertString(doc.getLength(), user + "\n", attributesU);
+                try {
+                    reproducirAudio("msgs.wav");
+                } catch (Exception e) {
+                }
             }
-            doc.insertString(doc.getLength(), mssg + "\n", attributesM);
+            doc.insertString(doc.getLength(), msgs + "\n", attributesM);
             doc.insertString(doc.getLength(), time + "\n\n", attributesT);
             scrollToBottom();
         } catch (BadLocationException e) {
@@ -215,12 +237,12 @@ public class TCPClient extends JFrame {
         StyleConstants.setAlignment(attributes, StyleConstants.ALIGN_CENTER);
         doc.setParagraphAttributes(doc.getLength(), 1, attributes, false);
         try {
-            doc.insertString(doc.getLength(), username+" ", attributesU);
+            doc.insertString(doc.getLength(), username + " ", attributesU);
             doc.insertString(doc.getLength(), text + "\n", attributes);
         } catch (BadLocationException e) {
             e.printStackTrace();
         }
-        scrollToBottom();   
+        scrollToBottom();
     }
 
     private void scrollToBottom() {
@@ -239,18 +261,53 @@ public class TCPClient extends JFrame {
         if (indiceUsuario == -1) {
             usernameOnline.add(user);
             Random rand = new Random((System.currentTimeMillis()) * 11);
-            Integer red = 36 + (rand.nextInt(220)) % 256;
+            Integer red = 46 + rand.nextInt(210);
             coloresUsuarioR.add(red);
             rand = new Random((System.currentTimeMillis()) * 5);
-            Integer green = 27 + (rand.nextInt(220)) % 256;
+            Integer green = 37 + rand.nextInt(219);
             coloresUsuarioG.add(green);
             rand = new Random((System.currentTimeMillis()) * 7);
-            Integer blue = 53 + (rand.nextInt(220)) % 256;
+            Integer blue = 63 + rand.nextInt(193);
             coloresUsuarioB.add(blue);
             indiceUsuario = usernameOnline.size() - 1;
             // System.out.println(indiceUsuario + " " + user + " " + red + " " + green + " "
             // + blue + " ");
         }
         return indiceUsuario;
+    }
+
+    public static AudioInputStream cargarAudio(String ruta) throws UnsupportedAudioFileException, IOException {
+        File archivoWAV = new File(ruta);
+        return AudioSystem.getAudioInputStream(archivoWAV);
+    }
+
+    public static void reproducirAudio(String ruta) throws LineUnavailableException {
+        Thread t = new Thread(() -> {
+            try (AudioInputStream audioInputStream = cargarAudio(ruta)) {
+                AudioFormat format = audioInputStream.getFormat();
+                DataLine.Info info = new DataLine.Info(SourceDataLine.class, format);
+                SourceDataLine line = (SourceDataLine) AudioSystem.getLine(info);
+                line.open(format);
+                line.start();
+
+                int bufferSize = 1024;
+                byte[] buffer = new byte[bufferSize];
+                int bytesRead;
+
+                while ((bytesRead = audioInputStream.read(buffer, 0, buffer.length)) >= 0) {
+                    line.write(buffer, 0, bytesRead);
+                }
+
+                line.drain();
+                line.close();
+            } catch (UnsupportedAudioFileException e) {
+                e.printStackTrace();
+            } catch (LineUnavailableException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+        t.start();
     }
 }

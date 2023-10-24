@@ -7,8 +7,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 
 public class TCPServer {
+
+    public static ArrayList<String> mensajes = new ArrayList<String>();
+    static String evento;
+    public static String archivo = "eventos" + LocalDate.now() + LocalTime.now() + ".txt";
+
     public static void main(String[] args) {
         try {
             int serverPort = 7896;
@@ -22,20 +29,40 @@ public class TCPServer {
                     DataInputStream usernameStream = new DataInputStream(clientSocket.getInputStream());
                     String username = usernameStream.readUTF();
                     String clienteIP = clientSocket.getInetAddress().getHostAddress();
-                    System.out.println("Conexión desde: " + clienteIP + " con el nombre: " + username + " Time: "
-                            + LocalTime.now() + " Date: " + LocalDate.now());
+                    evento = "Conexión desde: " + clienteIP + " con el nombre: " + username + " Time: "
+                            + LocalTime.now() + " Date: " + LocalDate.now();
+                    System.out.println(evento);
+                    escribir(evento);
                     Connection c = new Connection(clientSocket, connections, username);
                     connections.add(c);
+
+                    /*A un nuevo usuario se manda todos los mensajes, no me parece útil bajo este contexto
+                    for(String mensaje : mensajes){
+                        c.out.writeUTF(mensaje);
+                    }*/
 
                     for (Connection connection : connections) {
                         if (!connection.clientSocket.isClosed() && !connection.equals(c)) {
                             connection.out.writeUTF(username + ": se ha conectado");
+                            mensajes.add(username + ": se ha conectado");
                         }
                     }
                 }
             }
         } catch (IOException e) {
             System.out.println(e.getMessage());
+        }
+    }
+
+    public static void escribir(String evento) {
+        try {
+            FileWriter fileWriter = new FileWriter(archivo, true);
+            BufferedWriter writer = new BufferedWriter(fileWriter);
+            writer.write(evento);
+            writer.newLine();
+            writer.close();
+        } catch (IOException e) {
+            System.out.println("Error al escribir en el archivo: " + e.getMessage());
         }
     }
 }
@@ -68,9 +95,10 @@ class Connection extends Thread {
                     break;
                 }
                 String clienteIP = clientSocket.getInetAddress().getHostAddress();
-                System.out
-                        .println(clienteIP + " - " + data + " Time: " + LocalTime.now() + " Date: " + LocalDate.now());
-
+                TCPServer.evento = clienteIP + " - " + data + " Time: " + LocalTime.now() + " Date: " + LocalDate.now();
+                System.out.println(TCPServer.evento);
+                TCPServer.escribir(TCPServer.evento);
+                TCPServer.mensajes.add(data);
                 for (Connection connection : connections) {
                     if (!connection.clientSocket.isClosed() && !connection.equals(this)) {
                         connection.out.writeUTF(data);
@@ -81,12 +109,13 @@ class Connection extends Thread {
         } finally {
             try {
                 clientSocket.close();
-                System.out.println(
-                        "Desconexión desde: " + this.clientSocket.getInetAddress().getHostAddress() + " con el nombre: "
-                                + this.username + " Time: " + LocalTime.now() + " Date: " + LocalDate.now());
+                TCPServer.evento="Desconexión desde: " + this.clientSocket.getInetAddress().getHostAddress() + " con el nombre: "+ this.username + " Time: " + LocalTime.now() + " Date: " + LocalDate.now();
+                System.out.println(TCPServer.evento);
+                TCPServer.escribir(TCPServer.evento);
                 for (Connection connection : connections) {
                     if (!connection.clientSocket.isClosed() && !connection.equals(this)) {
                         connection.out.writeUTF(username + ": se ha ido");
+                        TCPServer.mensajes.add(username + ": se ha ido");
                     }
                 }
                 connections.remove(this);
