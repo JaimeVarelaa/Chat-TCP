@@ -20,7 +20,7 @@ Para que los sonidos se reproduzcan debe de estar en la misma ubicación que el 
 # Compilar el proyecto
 javac TCPClient.java
 
-# Iniciar el servidor
+# Iniciar el cliente
 java TCPClient
 ```
 Disfruta de este sencillo chat.
